@@ -1,6 +1,8 @@
-# Hermes Roaming
+# Hermes Roaming - Memory that travels with you -
 
 Hermes Agent memory sync across machines via Syncthing. Master-slave architecture — one desktop writes, laptops read and contribute.
+
+<img width="1168" height="784" alt="Illustrative photo" src="https://github.com/user-attachments/assets/7d7228d2-a507-4ec7-8a10-66e0b441bdd3" />
 
 ## Architecture
 
