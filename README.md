@@ -11,7 +11,9 @@ Desktop (master, read/write)          Laptop (slave, read-only on master)
          │                                      │
          ├── master.db                           ├── import-desktop-memories.py (session start)
          ├── export-desktop-memories.py          ├── export-laptop-memories.py (session end)
-         └── import-laptop-memories.py           └── local MEMORY.md / USER.md
+         ├── export-desktop-skills.py            ├── import-desktop-skills.py (session start)
+         ├── import-laptop-memories.py           ├── export-laptop-skills.py (session end)
+         └── import-laptop-skills.py             └── local MEMORY.md / USER.md + skills/
          │                                      │
          └──────── Syncthing (P2P) ──────────────┘
               ~/.hermes/shared/ folder
@@ -19,11 +21,23 @@ Desktop (master, read/write)          Laptop (slave, read-only on master)
 
 ## How it works
 
+### Memory sync
+
 1. **Desktop** exports `desktop-memories.json` periodically (cron)
 2. **Laptop** imports it at session start → `python3 import-desktop-memories.py`
 3. **Laptop** works, creates new memories locally
 4. **Laptop** exports at session end → `python3 export-laptop-memories.py`
 5. **Desktop** cron picks up `laptop-incoming.jsonl` → merges into master
+
+### Skills sync
+
+1. **Desktop** exports `desktop-skills.json` periodically (cron)
+2. **Laptop** imports at session start → `python3 import-desktop-skills.py`
+3. **Laptop** works, creates/improves skills locally
+4. **Laptop** exports at session end → `python3 export-laptop-skills.py`
+5. **Desktop** cron picks up `laptop-skills.json` → merges, higher version wins
+
+Skills use semantic version comparison: higher version always wins. Same version → local copy is kept. Laptop skills are never downgraded by older desktop versions, and vice versa.
 
 ## Multi-machine
 
@@ -44,11 +58,11 @@ mkdir -p ~/.hermes/shared
 cp master.db ~/.hermes/shared/
 hermes config set memory.mnemosyne.shared_surface_path ~/.hermes/shared/master.db
 
-# Cron: export + import every 30 min
+# Cron: export + import every 30 min (memory + skills)
 hermes cron create "every 30m" \
-  --name "Sync Hermes memories" \
+  --name "Sync Hermes memories and skills" \
   --toolsets terminal \
-  --prompt "python3 ~/.hermes/shared/export-desktop-memories.py && python3 ~/.hermes/shared/import-laptop-memories.py"
+  --prompt "python3 ~/.hermes/shared/export-desktop-memories.py && python3 ~/.hermes/shared/import-laptop-memories.py && python3 ~/.hermes/shared/export-desktop-skills.py && python3 ~/.hermes/shared/import-laptop-skills.py"
 ```
 
 ### Laptop (slave)
@@ -56,23 +70,27 @@ hermes cron create "every 30m" \
 ```bash
 # Session start
 python3 ~/.hermes/shared/import-desktop-memories.py
+python3 ~/.hermes/shared/import-desktop-skills.py
 
 # ... work ...
 
 # Session end
 python3 ~/.hermes/shared/export-laptop-memories.py
+python3 ~/.hermes/shared/export-laptop-skills.py
 ```
 
-## Memory levels
+## What gets synced
 
-| Level | What | Sync method |
+| Asset | What | Sync method |
 |-------|------|-------------|
-| Built-in | MEMORY.md + USER.md | Scripts (recommended) |
+| Memory | MEMORY.md + USER.md | Scripts (MD5 dedup) |
+| Skills | SKILL.md + supporting files | Scripts (semver, higher wins) |
 | Mnemosyne | master.db (vectors, triples) | Read-only on slaves, no merge |
 
 ## Limits
 
 - Built-in memory only (~15 KB max)
+- Skills: ~6 MB per export (excludes .hub cache, PDFs, files >100 KB)
 - No session/conversation sync
 - No multi-master (single source of truth)
 - Latency: exports every 30 min via cron
