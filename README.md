@@ -75,6 +75,39 @@ python3 ~/.hermes/shared/export-laptop-memories.py
 - No multi-master (single source of truth)
 - Latency: exports every 30 min via cron
 
+## ⚠️ API Keys (.env) — NOT synced
+
+The `.env` file containing API keys (DeepSeek, OpenRouter, GitHub, etc.) is **NOT included** in the Syncthing shared folder. This is intentional.
+
+### Why
+
+- Syncthing is P2P — every connected machine receives a copy of every file
+- If one machine is compromised, all API keys are exposed
+- `.env` files transmitted over relay servers could be intercepted (even though Syncthing encrypts transport, the file sits in plaintext on each peer)
+- Third-party Syncthing relays are untrusted infrastructure
+
+### Risks of syncing .env
+
+| Risk | Severity |
+|------|----------|
+| API key leak if any machine is compromised | 🔴 Critical |
+| All provider accounts accessible with leaked keys | 🔴 Critical |
+| Usage billing on your accounts by attackers | 🔴 Critical |
+| Relay server operator could read unencrypted file metadata | 🟡 Medium |
+
+### Recommended approach
+
+Copy `.env` **manually, once**, over a trusted channel:
+
+```bash
+# From desktop to laptop (SSH, USB, or secure transfer)
+scp desktop:~/.hermes/.env ~/.hermes/.env
+```
+
+When you add a new API key on one machine, add it on the other manually. The `.env` file changes rarely — a few times a year at most.
+
+**NEVER** add `~/.hermes/.env` to your Syncthing shared folder.
+
 ## License
 
 MIT
