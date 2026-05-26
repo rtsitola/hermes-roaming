@@ -1,0 +1,8 @@
+*.db
+*.json
+*.jsonl
+master.db
+laptop-incoming.jsonl
+desktop-memories.json
+__pycache__/
+.stfolder/
