@@ -11,13 +11,19 @@ Desktop (master, read/write)          Laptop (slave, read-only on master)
          ├── scripts/export-desktop-memories.py  ├── scripts/export-laptop-memories.py
          ├── scripts/export-desktop-skills.py    ├── scripts/import-desktop-skills.py
          ├── scripts/import-laptop-memories.py   ├── scripts/export-laptop-skills.py
-         └── scripts/import-laptop-skills.py     └── local MEMORY.md / USER.md + skills/
-         │                                      │
+         ├── scripts/import-laptop-skills.py     └── local MEMORY.md / USER.md + skills/
+         ├── scripts/diagnose.py                 │
+         ├── scripts/preflight.py                ├── scripts/diagnose.py
+         └── scripts/hermes_roaming.py           ├── scripts/preflight.py
+         │                                      └── scripts/hermes_roaming.py
          └──────── Syncthing (P2P) ──────────────┘
               ~/.hermes/shared/ folder
               
-  scripts/hermes_roaming.py — shared module (DRY)
-  data/* — JSON/JSONL exports (auto-created)
+  scripts/hermes_roaming.py — shared module (DRY): content_hash, parse_frontmatter,
+                              find_skills, export_skills_to, import_skills_from, etc.
+  scripts/diagnose.py       — full system diagnostic + peer comparison
+  scripts/preflight.py      — pre-import sanity check (Mnemosyne, master.db, disk)
+  data/*                    — JSON/JSONL exports (auto-created)
 ```
 
 ## How it works
@@ -88,6 +94,44 @@ python3 scripts/export-laptop-skills.py
 | Memory | MEMORY.md + USER.md | Scripts (MD5 dedup) |
 | Skills | SKILL.md + supporting files | Scripts (semver, higher wins) |
 | Mnemosyne | master.db (vectors, triples) | Read-only on slaves, no merge |
+
+## Verification
+
+Run a full diagnostic on any machine:
+
+```bash
+cd ~/.hermes/shared
+python3 scripts/diagnose.py
+```
+
+This checks: environment, Hermes, Mnemosyne, Syncthing, master.db access, and
+peer compatibility. Generates a report in `data/diagnose/` for the other machine
+to compare.
+
+Test the full sync cycle:
+
+```bash
+# Desktop: export memories + skills
+python3 scripts/export-desktop-memories.py
+python3 scripts/export-desktop-skills.py
+
+# Laptop: import (simulates session start)
+python3 scripts/import-desktop-memories.py
+python3 scripts/import-desktop-skills.py
+
+# ... work, create new memories / skills ...
+
+# Laptop: export (simulates session end)
+python3 scripts/export-laptop-memories.py
+python3 scripts/export-laptop-skills.py
+
+# Desktop: merge back
+python3 scripts/import-laptop-memories.py
+python3 scripts/import-laptop-skills.py
+```
+
+Expected: deduplication works (MD5 for memories, semver for skills),
+new entries are merged, existing entries are skipped.
 
 ## Limits
 
