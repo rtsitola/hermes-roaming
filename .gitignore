@@ -1,8 +1,21 @@
+# Données — jamais sur GitHub
 *.db
-*.json
-*.jsonl
-master.db
-laptop-incoming.jsonl
-desktop-memories.json
+*.db.lock
+*.db.watcher.lock
+data/
+
+# Python
 __pycache__/
+*.pyc
+*.pyo
+
+# Fichiers de transfert (transitoires)
+transfer/
+
+# Temp
 .stfolder/
+.mnemosyne_bridge_state.json
+
+# IDE
+.vscode/
+.idea/
