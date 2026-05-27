@@ -67,16 +67,22 @@ mkdir -p ~/.hermes/shared/scripts ~/.hermes/shared/data
 cp master.db ~/.hermes/shared/
 hermes config set memory.mnemosyne.shared_surface_path ~/.hermes/shared/master.db
 
-# Cron: export + import every 30 min (memory + skills)
-hermes cron create "every 30m" \
-  --name "Roaming: sync memories + skills" \
+# Cron: export + import every 15 min (memory + skills)
+hermes cron create "every 15m" \
+  --name "Sync Hermes memories + skills (desktop ↔ laptop)" \
   --toolsets terminal \
-  --prompt "cd ~/.hermes/shared && python3 scripts/export-desktop-memories.py && python3 scripts/import-laptop-memories.py && python3 scripts/export-desktop-skills.py && python3 scripts/import-laptop-skills.py"
+  --prompt "Execute les 4 scripts de sync dans l'ordre :
+1. python3 ~/.hermes/shared/scripts/export-desktop-memories.py
+2. python3 ~/.hermes/shared/scripts/import-laptop-memories.py
+3. python3 ~/.hermes/shared/scripts/export-desktop-skills.py
+4. python3 ~/.hermes/shared/scripts/import-laptop-skills.py"
 
 # To change the sync interval later:
 #   hermes cron list                                    # find the job ID
 #   hermes cron update <job_id> --schedule "every 1h"   # hourly
 #   hermes cron update <job_id> --schedule "0 */2 * * *"  # every 2 hours (cron syntax)
+#   hermes cron pause <job_id>                          # pause
+#   hermes cron resume <job_id>                         # resume
 ```
 
 ### Laptop (slave)
