@@ -11,9 +11,9 @@ Desktop (master, read/write)          Laptop (slave, read-only on master)
          │                                      │
          ├── master.db                           ├── scripts/import-desktop-memories.py
          ├── scripts/export-desktop-memories.py  ├── scripts/export-laptop-memories.py
-         ├── scripts/export-desktop-skills.py    ├── scripts/import-desktop-skills.py
+         ├── scripts/export-desktop-skills.py    ├── scripts/import-laptop-skills.py
          ├── scripts/import-laptop-memories.py   ├── scripts/export-laptop-skills.py
-         ├── scripts/import-laptop-skills.py     └── local MEMORY.md / USER.md + skills/
+         ├── scripts/import-desktop-skills.py    └── local MEMORY.md / USER.md + skills/
          ├── scripts/diagnose.py                 │
          ├── scripts/preflight.py                ├── scripts/diagnose.py
          └── scripts/hermes_roaming.py           ├── scripts/preflight.py
@@ -41,7 +41,7 @@ Desktop (master, read/write)          Laptop (slave, read-only on master)
 ### Skills sync
 
 1. **Desktop** exports → `data/desktop-skills.json` (periodic cron)
-2. **Laptop** imports at session start → `python3 scripts/import-desktop-skills.py`
+2. **Laptop** imports at session start → `python3 scripts/import-laptop-skills.py`
 3. **Laptop** creates/improves skills locally
 4. **Laptop** exports at session end → `python3 scripts/export-laptop-skills.py`
 5. **Desktop** cron picks up `data/laptop-skills.json` → merges (higher version wins)
@@ -75,7 +75,7 @@ hermes cron create "every 15m" \
 1. python3 ~/.hermes/shared/scripts/export-desktop-memories.py
 2. python3 ~/.hermes/shared/scripts/import-laptop-memories.py
 3. python3 ~/.hermes/shared/scripts/export-desktop-skills.py
-4. python3 ~/.hermes/shared/scripts/import-laptop-skills.py"
+4. python3 ~/.hermes/shared/scripts/import-desktop-skills.py"
 
 # To change the sync interval later:
 #   hermes cron list                                    # find the job ID
@@ -91,7 +91,7 @@ hermes cron create "every 15m" \
 # Session start
 cd ~/.hermes/shared
 python3 scripts/import-desktop-memories.py
-python3 scripts/import-desktop-skills.py
+python3 scripts/import-laptop-skills.py
 
 # ... work ...
 
@@ -130,7 +130,7 @@ python3 scripts/export-desktop-skills.py
 
 # Laptop: import (simulates session start)
 python3 scripts/import-desktop-memories.py
-python3 scripts/import-desktop-skills.py
+python3 scripts/import-laptop-skills.py
 
 # ... work, create new memories / skills ...
 
@@ -140,7 +140,7 @@ python3 scripts/export-laptop-skills.py
 
 # Desktop: merge back
 python3 scripts/import-laptop-memories.py
-python3 scripts/import-laptop-skills.py
+python3 scripts/import-desktop-skills.py
 ```
 
 Expected: deduplication works (MD5 for memories, semver for skills),
