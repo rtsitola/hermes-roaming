@@ -9,10 +9,10 @@ Hermes Agent memory sync across machines via Syncthing. Master-slave architectur
 ```
 Desktop (master, read/write)          Laptop (slave, read-only on master)
          │                                      │
-         ├── master.db                           ├── scripts/import-desktop-memories.py
+         ├── master.db                           ├── scripts/import-laptop-memories.py
          ├── scripts/export-desktop-memories.py  ├── scripts/export-laptop-memories.py
          ├── scripts/export-desktop-skills.py    ├── scripts/import-laptop-skills.py
-         ├── scripts/import-laptop-memories.py   ├── scripts/export-laptop-skills.py
+         ├── scripts/import-desktop-memories.py  ├── scripts/export-laptop-skills.py
          ├── scripts/import-desktop-skills.py    └── local MEMORY.md / USER.md + skills/
          ├── scripts/diagnose.py                 │
          ├── scripts/preflight.py                ├── scripts/diagnose.py
@@ -28,12 +28,27 @@ Desktop (master, read/write)          Laptop (slave, read-only on master)
   data/*                    — JSON/JSONL exports (auto-created)
 ```
 
+## Naming convention
+
+All import scripts follow: **`import-{machine}-*.py` = runs on `{machine}`**.
+
+| Script | Runs on | Reads | Purpose |
+|--------|---------|-------|---------|
+| `export-desktop-memories.py` | Desktop | local MEMORY.md/USER.md | Export desktop → `desktop-memories.json` |
+| `export-desktop-skills.py` | Desktop | local skills/ | Export desktop → `desktop-skills.json` |
+| `import-desktop-memories.py` | Desktop | `laptop-incoming.jsonl` | Merge laptop memories into desktop |
+| `import-desktop-skills.py` | Desktop | `laptop-skills.json` | Merge laptop skills into desktop |
+| `export-laptop-memories.py` | Laptop | local MEMORY.md/USER.md | Export laptop → `laptop-incoming.jsonl` |
+| `export-laptop-skills.py` | Laptop | local skills/ | Export laptop → `laptop-skills.json` |
+| `import-laptop-memories.py` | Laptop | `desktop-memories.json` | Merge desktop memories into laptop |
+| `import-laptop-skills.py` | Laptop | `desktop-skills.json` | Merge desktop skills into laptop |
+
 ## How it works
 
 ### Memory sync
 
 1. **Desktop** exports → `data/desktop-memories.json` (periodic cron)
-2. **Laptop** imports at session start → `python3 scripts/import-desktop-memories.py`
+2. **Laptop** imports at session start → `python3 scripts/import-laptop-memories.py`
 3. **Laptop** works, creates new memories locally
 4. **Laptop** exports at session end → `python3 scripts/export-laptop-memories.py`
 5. **Desktop** cron picks up `data/laptop-incoming.jsonl` → merges
@@ -73,7 +88,7 @@ hermes cron create "every 15m" \
   --toolsets terminal \
   --prompt "Execute les 4 scripts de sync dans l'ordre :
 1. python3 ~/.hermes/shared/scripts/export-desktop-memories.py
-2. python3 ~/.hermes/shared/scripts/import-laptop-memories.py
+2. python3 ~/.hermes/shared/scripts/import-desktop-memories.py
 3. python3 ~/.hermes/shared/scripts/export-desktop-skills.py
 4. python3 ~/.hermes/shared/scripts/import-desktop-skills.py"
 
@@ -90,7 +105,7 @@ hermes cron create "every 15m" \
 ```bash
 # Session start
 cd ~/.hermes/shared
-python3 scripts/import-desktop-memories.py
+python3 scripts/import-laptop-memories.py
 python3 scripts/import-laptop-skills.py
 
 # ... work ...
@@ -129,7 +144,7 @@ python3 scripts/export-desktop-memories.py
 python3 scripts/export-desktop-skills.py
 
 # Laptop: import (simulates session start)
-python3 scripts/import-desktop-memories.py
+python3 scripts/import-laptop-memories.py
 python3 scripts/import-laptop-skills.py
 
 # ... work, create new memories / skills ...
@@ -139,7 +154,7 @@ python3 scripts/export-laptop-memories.py
 python3 scripts/export-laptop-skills.py
 
 # Desktop: merge back
-python3 scripts/import-laptop-memories.py
+python3 scripts/import-desktop-memories.py
 python3 scripts/import-desktop-skills.py
 ```
 

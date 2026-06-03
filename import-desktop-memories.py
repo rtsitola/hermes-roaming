@@ -1,44 +1,55 @@
 #!/usr/bin/env python3
-"""LAPTOP: Import desktop memories from shared/data/desktop-memories.json"""
-import json, os, sqlite3
-from hermes_roaming import (DATA_DIR, MEMORY_MD, USER_MD, SHARED,
-                            content_hash, load_hashes, write_memory_file, preflight_check)
+"""DESKTOP: Import laptop memories from shared/data/laptop-incoming.jsonl"""
+import json, os
+from hermes_roaming import (DATA_DIR, MEMORY_MD, USER_MD,
+                            content_hash, load_hashes, write_memory_file,
+                            preflight_check, MAX_MEMORY_CHARS, MAX_USER_CHARS)
 
-def import_desktop() -> str:
+def merge() -> str:
     preflight_check()
 
-    export_path = os.path.join(DATA_DIR, "desktop-memories.json")
-    if not os.path.exists(export_path):
-        return _fallback_master_db()
+    incoming_path = os.path.join(DATA_DIR, "laptop-incoming.jsonl")
+    if not os.path.exists(incoming_path):
+        return "Nothing to merge."
 
-    with open(export_path) as f:
-        entries = json.load(f)
+    with open(incoming_path) as f:
+        entries = [json.loads(line) for line in f if line.strip()]
 
-    stats = {"memory": 0, "user": 0}
-    for target, local_path in [("memory", MEMORY_MD), ("user", USER_MD)]:
-        existing_hashes, current_text = load_hashes(local_path)
+    if not entries:
+        os.remove(incoming_path)
+        return "No valid entries."
+
+    memory_entries = [e for e in entries if e.get("target") == "memory"]
+    user_entries = [e for e in entries if e.get("target") == "user"]
+    imported = {"memory": 0, "user": 0}
+
+    for entries_list, path, max_chars, label in [
+        (memory_entries, MEMORY_MD, MAX_MEMORY_CHARS, "memory"),
+        (user_entries, USER_MD, MAX_USER_CHARS, "user"),
+    ]:
+        existing_hashes, current_text = load_hashes(path)
         current_blocks = [b.strip() for b in current_text.split("§") if b.strip()]
-        for entry in entries:
-            if entry.get("target") != target:
-                continue
-            content = entry.get("content", "").strip()
-            if content and content_hash(content) not in existing_hashes:
-                current_blocks.append(content)
-                existing_hashes.add(content_hash(content))
-                stats[target] += 1
-        if stats[target]:
-            write_memory_file(local_path, current_blocks)
+        for e in entries_list:
+            c = e.get("content", "").strip()
+            if c and content_hash(c) not in existing_hashes:
+                current_blocks.append(c)
+                existing_hashes.add(content_hash(c))
+                imported[label] += 1
 
-    return f"Imported from desktop: {stats['memory']} memory + {stats['user']} user"
+        if imported[label]:
+            # Truncate oldest blocks if exceeding limit
+            while current_blocks:
+                candidate = "\n§\n".join(current_blocks)
+                if len(candidate) <= max_chars:
+                    break
+                current_blocks.pop(0)  # remove oldest
+            write_memory_file(path, current_blocks)
 
-def _fallback_master_db() -> str:
-    master_db = os.path.join(SHARED, "master.db")
-    if not os.path.exists(master_db):
-        return "No master.db found. Skipping import."
-    print(f"Master DB found ({os.path.getsize(master_db)} bytes).")
-    print("Configure Hermes to use it:")
-    print("  hermes config set memory.mnemosyne.shared_surface_path ~/.hermes/shared/master.db")
-    return "OK"
+    os.remove(incoming_path)
+    total = imported["memory"] + imported["user"]
+    if total == 0:
+        return "No new entries (all duplicates)."
+    return f"Merged: {imported['memory']} memory + {imported['user']} user = {total} total"
 
 if __name__ == "__main__":
-    print(import_desktop())
+    print(merge())
